@@ -1,22 +1,23 @@
 package com.example.movieinfoservice.models;
 
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
+import javax.persistence.*;
 
 
-@Document(collection="movies")
-public class Movie {
+
+@Entity
+@Table(name="movies")
+public class JpaMovie {
 
     @Id
-    private String movieId;
+    private String id;
     private String name;
     private String description;
 
-    public Movie() {
+    public JpaMovie() {
     }
 
-    public Movie(String movieId, String name, String description) {
-        this.movieId = movieId;
+    public JpaMovie(String movieId, String name, String description) {
+        this.id = movieId;
         this.name = name;
         this.description = description;
     }
@@ -30,11 +31,11 @@ public class Movie {
     }
 
     public String getMovieId() {
-        return movieId;
+        return id;
     }
 
     public void setMovieId(String movieId) {
-        this.movieId = movieId;
+        this.id = movieId;
     }
 
     public String getName() {
