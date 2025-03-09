@@ -2,23 +2,42 @@ package com.example.databaseConnector;
 
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Random;
+import java.util.Set;
+
+import com.example.grpc.ProtoRating;
+import com.example.grpc.ProtoRatingOrBuilder;
 
 public class MovieDatabaseConnector {
 
     // Database connection details
-    private static final String URL = "jdbc:mysql://localhost:3306/test_movies";
+    private static final String URL = "jdbc:mysql://localhost:3306/movieratings";
     private static final String USER = "root"; // Replace with your MySQL username
-    private static final String PASSWORD = "Root@12345"; // Replace with your MySQL password
+    private static final String PASSWORD = "123456789"; // Replace with your MySQL password
 
-    public static List<String> getMoviesNames(){
-        List<Movie> movies = fetchMovies();
-        List<String> names = new ArrayList<>();
+    private static final List<Integer> MOVIE_IDS = Arrays.asList(27205, 157336, 155, 19995, 24428, 293660, 299536, 550,
+            118340, 680);
+
+    private static final int NUM_RATINGS_PER_MOVIE = 100;
+    private static final Random RANDOM = new Random();
+
+    public static List<ProtoRating> getTop10Ratings() {
+        List<Movie> movies = fetchMovies(); // Assuming fetchMovies() is defined elsewhere
+        List<ProtoRating> ratings = new ArrayList<>();
 
         for (Movie movie : movies) {
-            names.add(movie.getName());
+            ProtoRating tempRating = ProtoRating.newBuilder()
+                    .setMovieId(movie.getMovieId())
+                    .setRating(movie.getAvgRating())
+                    .build();
+
+            ratings.add(tempRating);
         }
-        return names;
+
+        return ratings;
     }
 
     // Method to fetch movies from the database
@@ -27,20 +46,23 @@ public class MovieDatabaseConnector {
 
         try (Connection connection = DriverManager.getConnection(URL, USER, PASSWORD)) {
             // SQL query
-            String sql = "SELECT * FROM movies;";
+            String sql = "SELECT movie_id, AVG(rating) AS average_rating\n" + //
+                    "FROM ratings\n" + //
+                    "GROUP BY movie_id\n" + //
+                    "ORDER BY average_rating DESC\n" + //
+                    "LIMIT 10;";
 
             // Create a statement
             try (Statement statement = connection.createStatement();
-                 ResultSet resultSet = statement.executeQuery(sql)) {
+                    ResultSet resultSet = statement.executeQuery(sql)) {
 
                 // Process the result set
                 while (resultSet.next()) {
-                    int id = resultSet.getInt("id");
-                    String name = resultSet.getString("name");
-                    double rate = resultSet.getDouble("rate");
+                    String id = resultSet.getString("movie_id");
+                    double averageRating = resultSet.getDouble("average_rating");
 
                     // Create a Movie object and add it to the list
-                    Movie movie = new Movie(id, name, rate);
+                    Movie movie = new Movie(id, averageRating);
                     movies.add(movie);
                 }
             }
@@ -51,30 +73,62 @@ public class MovieDatabaseConnector {
 
         return movies;
     }
+
+    public static void seedRatingsDatabase() {
+
+        try (Connection connection = DriverManager.getConnection(URL, USER, PASSWORD)) {
+            String sql = "INSERT INTO ratings (user_id, movie_id, rating) VALUES (?, ?, ?)";
+            try (PreparedStatement statement = connection.prepareStatement(sql)) {
+                for (int movieId : MOVIE_IDS) {
+                    Set<String> uniquePairs = new HashSet<>(); // Stores user_id and movie_id pairs
+                    int attempts = 0; // Prevent infinite loops
+                    while (uniquePairs.size() < NUM_RATINGS_PER_MOVIE && attempts < 2 * NUM_RATINGS_PER_MOVIE) {
+                        int userId = RANDOM.nextInt(1000) + 1; // Random user_id between 1 and 1000
+                        String pairKey = userId + "-" + movieId;
+
+                        if (!uniquePairs.contains(pairKey)) {
+                            uniquePairs.add(pairKey); // Store the unique user-movie pair
+                            int rating = RANDOM.nextInt(5) + 1; // Random rating between 1 and 5
+
+                            statement.setString(1, String.valueOf(userId));
+                            statement.setString(2, String.valueOf(movieId));
+                            statement.setInt(3, rating);
+                            statement.executeUpdate();
+                        }
+                        attempts++;
+                    }
+                }
+                System.out.println("Dummy data inserted successfully!");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
 }
 
 // Movie class to represent a movie record
 class Movie {
-    private int id;
-    private String name;
-    private double rate;
+    private String id;
+    private double averageRating;
 
-    public Movie(int id, String name, double rate) {
+    public Movie(String id, double rate) {
         this.id = id;
-        this.name = name;
-        this.rate = rate;
+        this.averageRating = rate;
     }
 
-    public String getName(){
-        return this.name;
+    public String getMovieId() {
+        return this.id;
+    }
+
+    public double getAvgRating() {
+        return this.averageRating;
     }
 
     @Override
     public String toString() {
         return "Movie{" +
                 "id=" + id +
-                ", name='" + name + '\'' +
-                ", rate=" + rate +
+                ", rate=" + averageRating +
                 '}';
     }
 }
