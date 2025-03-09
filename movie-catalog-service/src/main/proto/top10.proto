@@ -12,5 +12,10 @@ service Top10Service {
 message Top10Request {}
 
 message Top10Response {
-  repeated string movies = 1;
+  repeated ProtoRating ratings = 1;
+}
+
+message ProtoRating {
+  string movieId = 1;
+  double rating = 2;
 }
