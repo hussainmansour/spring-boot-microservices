@@ -7,6 +7,8 @@ import com.netflix.hystrix.contrib.javanica.annotation.HystrixCommand;
 import com.netflix.hystrix.contrib.javanica.annotation.HystrixProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import com.example.grpc.ProtoRating;
+
 
 @Service
 public class MovieInfoService {
@@ -34,6 +36,12 @@ public class MovieInfoService {
                     @HystrixProperty(name = "circuitBreaker.sleepWindowInMilliseconds", value = "5000")
     })
     public CatalogItem getCatalogItem(Rating rating) {
+        String movieDetailsUrl = "http://movie-info-service/movies/" + rating.getMovieId();
+        Movie movie = this.restTemplate.getForObject(movieDetailsUrl, Movie.class);
+        return new CatalogItem(movie.getName(), movie.getDescription(), rating.getRating());
+    }
+
+    public CatalogItem getCatalogItem(ProtoRating rating) {
         String movieDetailsUrl = "http://movie-info-service/movies/" + rating.getMovieId();
         Movie movie = this.restTemplate.getForObject(movieDetailsUrl, Movie.class);
         return new CatalogItem(movie.getName(), movie.getDescription(), rating.getRating());
