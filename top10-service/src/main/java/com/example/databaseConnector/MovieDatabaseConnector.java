@@ -1,5 +1,8 @@
 package com.example.databaseConnector;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -16,13 +19,11 @@ public class MovieDatabaseConnector {
     // Database connection details
     private static final String URL = "jdbc:mysql://localhost:3306/movieratings";
     private static final String USER = "root"; // Replace with your MySQL username
-    private static final String PASSWORD = "123456789"; // Replace with your MySQL password
+    private static final String PASSWORD = "Root@12345"; // Replace with your MySQL password
 
-    private static final List<Integer> MOVIE_IDS = Arrays.asList(27205, 157336, 155, 19995, 24428, 293660, 299536, 550,
-            118340, 680);
-
-    private static final int NUM_RATINGS_PER_MOVIE = 100;
+    private static final int NUM_RATINGS_PER_MOVIE = 5;
     private static final Random RANDOM = new Random();
+    private static final int NUM_MOVIES_IDS = 200000;
 
     public static List<ProtoRating> getTop10Ratings() {
         List<Movie> movies = fetchMovies(); // Assuming fetchMovies() is defined elsewhere
@@ -40,7 +41,6 @@ public class MovieDatabaseConnector {
         return ratings;
     }
 
-    // Method to fetch movies from the database
     private static List<Movie> fetchMovies() {
         List<Movie> movies = new ArrayList<>();
 
@@ -75,35 +75,57 @@ public class MovieDatabaseConnector {
     }
 
     public static void seedRatingsDatabase() {
-
         try (Connection connection = DriverManager.getConnection(URL, USER, PASSWORD)) {
             String sql = "INSERT INTO ratings (user_id, movie_id, rating) VALUES (?, ?, ?)";
             try (PreparedStatement statement = connection.prepareStatement(sql)) {
-                for (int movieId : MOVIE_IDS) {
-                    Set<String> uniquePairs = new HashSet<>(); // Stores user_id and movie_id pairs
-                    int attempts = 0; // Prevent infinite loops
-                    while (uniquePairs.size() < NUM_RATINGS_PER_MOVIE && attempts < 2 * NUM_RATINGS_PER_MOVIE) {
-                        int userId = RANDOM.nextInt(1000) + 1; // Random user_id between 1 and 1000
-                        String pairKey = userId + "-" + movieId;
-
-                        if (!uniquePairs.contains(pairKey)) {
-                            uniquePairs.add(pairKey); // Store the unique user-movie pair
-                            int rating = RANDOM.nextInt(5) + 1; // Random rating between 1 and 5
-
-                            statement.setString(1, String.valueOf(userId));
-                            statement.setString(2, String.valueOf(movieId));
-                            statement.setInt(3, rating);
-                            statement.executeUpdate();
+                List<String> MOVIE_IDS = readMoviesIds();
+                System.out.println("Start creating dataset...");
+                int written = 0;
+                int batchSize = 100000; 
+                connection.setAutoCommit(false);
+    
+                for (String movieId : MOVIE_IDS) {
+                    for (int userId = 0; userId < NUM_RATINGS_PER_MOVIE; userId++) {
+                        int rating = RANDOM.nextInt(5) + 1;
+                        statement.setString(1, String.valueOf(userId));
+                        statement.setString(2, movieId);
+                        statement.setInt(3, rating);
+                        statement.addBatch(); 
+                        written++;
+                        if (written % batchSize == 0) {
+                            statement.executeBatch();
+                            connection.commit(); 
+                            System.out.println("Successfully written " + written + " out of " + (MOVIE_IDS.size() * NUM_RATINGS_PER_MOVIE));
                         }
-                        attempts++;
                     }
                 }
+                statement.executeBatch();
+                connection.commit(); 
                 System.out.println("Dummy data inserted successfully!");
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
+
+    private static List<String> readMoviesIds(){
+        System.out.println("Reading movies IDs from file...");
+        String csvFile = "/home/ahmed-hehsam/level4term2/dataIntensive/labs/lab2/spring-boot-microservices/movies-data/movies_id.csv";
+        List<String> moviesIds = new ArrayList<>();
+        try (BufferedReader br = new BufferedReader(new FileReader(csvFile))) {
+            String line;
+            int toRead = NUM_MOVIES_IDS;
+            while ((line = br.readLine()) != null && toRead > 0) {
+                moviesIds.add(line);
+                toRead--;
+
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return moviesIds;
+    }
+
 }
 
 // Movie class to represent a movie record
