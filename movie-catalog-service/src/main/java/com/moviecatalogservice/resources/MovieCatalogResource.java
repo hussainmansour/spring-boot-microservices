@@ -45,6 +45,7 @@ public class MovieCatalogResource {
      */
     @RequestMapping("/{userId}")
     public List<CatalogItem> getCatalog(@PathVariable String userId) {
+        System.out.println("Ahmed is testing id: " + userId);
         List<Rating> ratings = userRatingService.getUserRating(userId).getRatings();
         return ratings.stream().map(movieInfoService::getCatalogItem).collect(Collectors.toList());
     }

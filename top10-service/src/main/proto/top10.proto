@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package com.example.grpc;
+
+option java_multiple_files = true;
+option java_package = "com.example.grpc";
+
+service Top10Service {
+  rpc getTop10 (Top10Request) returns (Top10Response);
+}
+
+message Top10Request {}
+
+message Top10Response {
+  repeated ProtoRating ratings = 1;
+}
+
+message ProtoRating {
+  string movieId = 1;
+  double rating = 2;
+}

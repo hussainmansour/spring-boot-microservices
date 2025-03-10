@@ -4,13 +4,19 @@ public class CatalogItem {
 
     private String name;
     private String description;
-    private int rating;
+    private double rating;
 
     public CatalogItem() {
 
     }
 
     public CatalogItem(String name, String description, int rating) {
+        this.name = name;
+        this.description = description;
+        this.rating = rating;
+    }
+
+    public CatalogItem(String name, String description, double rating) {
         this.name = name;
         this.description = description;
         this.rating = rating;
@@ -32,7 +38,7 @@ public class CatalogItem {
         this.description = description;
     }
 
-    public int getRating() {
+    public double getRating() {
         return rating;
     }
 
