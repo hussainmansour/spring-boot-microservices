@@ -35,10 +35,10 @@ public class MovieResource {
     @RequestMapping("/{movieId}")
     public Movie getMovieInfo(@PathVariable("movieId") String movieId) {
         // check the mongoDB cache
-        Optional<Movie> cachedMovie = movieRepository.findById(movieId);
-        if (cachedMovie.isPresent()) {
-            return cachedMovie.get();
-        }
+//        Optional<Movie> cachedMovie = movieRepository.findById(movieId);
+//        if (cachedMovie.isPresent()) {
+//            return cachedMovie.get();
+//        }
 
         try {
             Thread.sleep(500 + random.nextInt(1000));
@@ -56,7 +56,7 @@ public class MovieResource {
 //        Movie movie = new Movie(movieId, movieSummary.getTitle(), movieSummary.getOverview());
 
         // cache the result in mongoDB
-        movieRepository.save(movie);
+        // movieRepository.save(movie);
         return movie;
     }
 }
